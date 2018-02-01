@@ -64,6 +64,8 @@ void print_wakeup_touchpad(){
 
 void callback(){
   // light up the led when a touch interrupt is triggered
+  Serial.print("this callvback runs on Core: ");
+  Serial.println(xPortGetCoreID());
   digitalWrite (LED_PIN, HIGH);
   delay(500);
   digitalWrite (LED_PIN, LOW);
@@ -81,6 +83,9 @@ void setup(){
   //Increment boot number and print it every reboot
   ++bootCount;
   Serial.println("Boot number: " + String(bootCount));
+
+  Serial.print("setup() runs on Core: ");
+  Serial.println(xPortGetCoreID());
 
   //Print the wakeup reason for ESP32 and touchpad too
   print_wakeup_reason();
