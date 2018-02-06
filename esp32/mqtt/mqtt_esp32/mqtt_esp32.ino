@@ -27,13 +27,28 @@ Adafruit_MQTT_Subscribe onoffbutton = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAM
 
 /*************************** Sketch Code ************************************/
 
-void MQTT_connect();
+//void MQTT_connect();
+
+// task to run on second core. this runs independently of the other core on
+// which loop() is running
+void taskForCore0(void* param)
+{
+    uint32_t loop = 0;
+    const int loopDelay = 5000;
+    while(true)
+    {
+      // do some other task in this loop
+      Serial.print(" this is core 0. iteration #");
+      Serial.print(loop++);
+      Serial.println("...");
+      delay(loopDelay); 
+    }
+}
 
 void setup() {
   Serial.begin(115200);
   delay(10);
-
-  //initialize the random seed
+  
   randomSeed(analogRead(0));
 
   Serial.println(F("Adafruit MQTT demo"));
@@ -48,8 +63,8 @@ void setup() {
     delay(500);
     Serial.print(".");
   }
+  
   Serial.println();
-
   Serial.println("WiFi connected");
   Serial.println("IP address: "); Serial.println(WiFi.localIP());
 
@@ -64,10 +79,7 @@ void setup() {
     1,              // priority
     &Task1,         // code to run
     0);             // Core to run on : choose between 0 and 1 (1 is default for ESP32 IDE)
-
 }
-
-
 
 void loop() {
   // Ensure the connection to the MQTT server is alive (this will make the first
@@ -85,7 +97,7 @@ void loop() {
       Serial.println((char *)onoffbutton.lastread);
     }
   }
-
+  
   uint32_t x  = random(0,100);
   Serial.print(F("\nSending photocell val "));
   Serial.print(x);
@@ -98,23 +110,6 @@ void loop() {
     mqtt.disconnect();
   }
   */
-}
-
-
-
-// publish variable value to the MQTT broker
-void taskForCore0(void* param)
-{
-    uint32_t loop = 0;
-    const int loopDelay = 5000;
-    while(true)
-    {
-      // do some other task in this loop
-      Serial.print(" this is core 0. iteration #");
-      Serial.print(loop++);
-      Serial.println("...");
-      delay(loopDelay); 
-    }
 }
 
 // Function to connect and reconnect as necessary to the MQTT server.
