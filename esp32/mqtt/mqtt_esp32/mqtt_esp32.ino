@@ -1,20 +1,3 @@
-/***************************************************
-  Adafruit MQTT Library ESP8266 Example
-
-  Must use ESP8266 Arduino from:
-    https://github.com/esp8266/Arduino
-
-  Works great with Adafruit's Huzzah ESP board & Feather
-  ----> https://www.adafruit.com/product/2471
-  ----> https://www.adafruit.com/products/2821
-
-  Adafruit invests time and resources providing this open source code,
-  please support Adafruit and open-source hardware by purchasing
-  products from Adafruit!
-
-  Written by Tony DiCola for Adafruit Industries.
-  MIT license, all text above must be included in any redistribution
- ****************************************************/
 #include <WiFi.h>
 #include "Adafruit_MQTT.h"
 #include "Adafruit_MQTT_Client.h"
@@ -30,6 +13,8 @@ WiFiClient client;
 
 // Setup the MQTT client class by passing in the WiFi client and MQTT server and login details.
 Adafruit_MQTT_Client mqtt(&client, AIO_SERVER, AIO_SERVERPORT, AIO_USERNAME, AIO_KEY);
+
+TaskHandle_t Task1;
 
 /****************************** Feeds ***************************************/
 
@@ -70,9 +55,19 @@ void setup() {
 
   // Setup MQTT subscription for onoff feed.
   mqtt.subscribe(&onoffbutton);
+
+  xTaskCreatePinnedToCore(
+    taskForCore0,   // code to run
+    "non MQTT task loop",       // name of task
+    1000,           // stack size
+    NULL,           // parameters to pass to task
+    1,              // priority
+    &Task1,         // code to run
+    0);             // Core to run on : choose between 0 and 1 (1 is default for ESP32 IDE)
+
 }
 
-uint32_t x=0;
+
 
 void loop() {
   // Ensure the connection to the MQTT server is alive (this will make the first
@@ -91,24 +86,35 @@ void loop() {
     }
   }
 
-  // Now we can publish stuff!
+  uint32_t x  = random(0,100);
   Serial.print(F("\nSending photocell val "));
-  x = random(0,100);
   Serial.print(x);
   Serial.print("...");
-  if (! photocell.publish(x)) {
-    Serial.println(F("Failed"));
-  } else {
-    Serial.println(F("OK!"));
-  }
+  photocell.publish(x) ? Serial.println(F("OK!")) : Serial.println(F("Failed"));
 
-  // ping the server to keep the mqtt connection alive
-  // NOT required if you are publishing once every KEEPALIVE seconds
+  // ping server to keep it alive
   /*
   if(! mqtt.ping()) {
     mqtt.disconnect();
   }
   */
+}
+
+
+
+// publish variable value to the MQTT broker
+void taskForCore0(void* param)
+{
+    uint32_t loop = 0;
+    const int loopDelay = 5000;
+    while(true)
+    {
+      // do some other task in this loop
+      Serial.print(" this is core 0. iteration #");
+      Serial.print(loop++);
+      Serial.println("...");
+      delay(loopDelay); 
+    }
 }
 
 // Function to connect and reconnect as necessary to the MQTT server.
