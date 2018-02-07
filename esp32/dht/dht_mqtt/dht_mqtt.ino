@@ -16,12 +16,13 @@ Adafruit_MQTT_Client mqtt(&client, AIO_SERVER, AIO_SERVERPORT, AIO_USERNAME, AIO
 
 TaskHandle_t Task1;
 
-#define DHTPIN 2     // what digital pin we're connected to
+#define DHTPIN 13     // what digital pin we're connected to
 #define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
 
 DHT dht(DHTPIN, DHTTYPE);
-
-float h, t;
+int publishInterval = 3000; 
+float gHumidity = 0.0;
+float gTemperature = 0.0;
 
 /********* end globals *********/
 
@@ -54,44 +55,40 @@ void connectToWIFI()
   Serial.println("IP address: "); Serial.println(WiFi.localIP());
 }
 
-// task to run on second core. this runs independently of the other core on
-// which loop() is running
-void readFromDHTSensor(void* param)
-{
-
-}
-
 void setup() {
   Serial.begin(9600);
   Serial.println("this sketch reads data from a dht22 sensor and publishes it to adafruit mqtt server");
 
   connectToWIFI();
   dht.begin();
+
 }
 
 void loop() {
 
-  // connect to mqtt server
-  MQTT_connect();
-  
-  // Wait a few seconds between measurements.
-  delay(3000);
-
+   // connect to mqtt server
+   MQTT_connect();
+   delay(publishInterval);
+    
   // Reading temperature or humidity takes about 250 milliseconds!
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-  h = dht.readHumidity();
+  gHumidity = dht.readHumidity();
   // Read temperature as Celsius (the default)
-  t = dht.readTemperature();
+  gTemperature = dht.readTemperature();
   
   // Check if any reads failed and exit early (to try again).
-  if (isnan(h) || isnan(t)) {
+  if (isnan(gHumidity) || isnan(gTemperature)) {
     Serial.println("Failed to read from DHT sensor!");
     return;
   }
 
-  printDataToSerial(h, t);
-  publishData(h, t);
-
+  printDataToSerial(gHumidity, gTemperature);
+  
+  publishData(gHumidity, gTemperature);
+ 
+  if(! mqtt.ping()) {
+    mqtt.disconnect();
+  }
 }
 
 void printDataToSerial(float h, float t)
