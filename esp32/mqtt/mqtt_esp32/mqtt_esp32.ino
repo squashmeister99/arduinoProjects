@@ -27,8 +27,6 @@ Adafruit_MQTT_Subscribe onoffbutton = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAM
 
 /*************************** Sketch Code ************************************/
 
-//void MQTT_connect();
-
 // task to run on second core. this runs independently of the other core on
 // which loop() is running
 void taskForCore0(void* param)
@@ -136,5 +134,6 @@ void MQTT_connect() {
          while (1);
        }
   }
+  
   Serial.println("MQTT Connected!");
 }
