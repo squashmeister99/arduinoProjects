@@ -26,10 +26,31 @@ Adafruit_MQTT_Publish humidity = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/fee
 // Setup a feed called 'temperature' 
 Adafruit_MQTT_Publish temperature = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/temperature");
 
+typedef enum {
+  kStatusSuccess = 0,
+  kStatusWifiFailure = -1,
+  kStatusMQTTConnectionFailure = -2,
+} tStatus;
+
+bool isSuccess(tStatus code)
+{
+    return code == kStatusSuccess;
+}
+
+bool isWarning(tStatus code)
+{
+    return code > kStatusSuccess;
+}
+
+bool isError(tStatus code)
+{
+    return code < kStatusSuccess;
+}
+
 /*************************** Sketch Code ************************************/
 
 //attempts a wifi connection. if connection fails, then wifi will reset
-void connectToWIFI()
+tStatus connectToWIFI()
 {
   // Connect to WiFi access point.
   Serial.println(); 
@@ -41,11 +62,18 @@ void connectToWIFI()
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
     Serial.print(".");
+    retries--;
+    if(retries == 0) {
+      Serial.println("WiFi connection failure..");
+      return kStatusWifiFailure;
+    }
   }
   
   Serial.println();
   Serial.println("WiFi connected");
   Serial.println("IP address: "); Serial.println(WiFi.localIP());
+
+  return kStatusSuccess;
 }
 
 void printDataToSerial(float h, float t)
@@ -65,12 +93,12 @@ void publishData(float h, float t)
 
 // Function to connect and reconnect as necessary to the MQTT server.
 // Should be called in the loop function and it will take care if connecting.
-void MQTT_connect() {
+tStatus MQTT_connect() {
   int8_t ret;
 
   // Stop if already connected.
   if (mqtt.connected()) {
-    return;
+    return kStatusSuccess;
   }
 
   Serial.print("Connecting to MQTT... ");
@@ -83,25 +111,36 @@ void MQTT_connect() {
        delay(5000);  // wait 5 seconds
        retries--;
        if (retries == 0) {
-         // basically die and wait for WDT to reset me
-         while (1);
+         Serial.println("MQTT connection failure..");
+         return kStatusMQTTConnectionFailure;
        }
   }
   
   Serial.println("MQTT Connected!");
+  return kStatusSuccess;
 }
 
 // setup code
 void setup() {
+  tStatus status = kStatusSuccess;
   Serial.begin(9600);
   Serial.println("this sketch reads data from a dht22 sensor and publishes it to adafruit mqtt server");
 
-  connectToWIFI();
+  status = connectToWIFI();
+  if(isError(status)) {
+    goToSleep();
+    // code below this line will never execute in case of connection failure, since esp32 will sleep and then re-run setup on wakeup.
+  }
+  
   dht.begin();
 
   // connect to mqtt server
-   MQTT_connect();
- 
+  status = MQTT_connect();
+  if(isError(status)) {
+    goToSleep();
+    // code below this line will never execute in case of connection failure, since esp32 will sleep and then re-run setup on wakeup.
+  }
+   
   // Reading temperature or humidity takes about 250 milliseconds!
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
   gHumidity = dht.readHumidity();
@@ -122,7 +161,14 @@ void setup() {
     mqtt.disconnect();
   }
 
-  /*
+  // sleep
+  goToSleep();
+ 
+}
+
+void goToSleep()
+{
+   /*
   First we configure the wake up source
   We set our ESP32 to wake up every 5 minutes
   */
@@ -151,8 +197,6 @@ void setup() {
   */
   Serial.println("Going to sleep now");
   esp_deep_sleep_start();
-  Serial.println("This will never be printed");
-
 }
 
 void loop() {
