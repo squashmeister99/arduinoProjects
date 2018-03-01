@@ -41,7 +41,7 @@
 // SmartThings Library for ESP32WiFi
 //******************************************************************************************
 #include <SmartThingsESP32WiFi.h>
-
+#include "credentials.h"
 //******************************************************************************************
 // ST_Anything Library 
 //******************************************************************************************
@@ -138,16 +138,11 @@
 //******************************************************************************************
 //ESP832 WiFi Information
 //******************************************************************************************
-String str_ssid     = "yourSSIDhere";                           //  <---You must edit this line!
-String str_password = "yourWiFiPasswordhere";                   //  <---You must edit this line!
-IPAddress ip(192, 168, 1, 233);       //Device IP Address       //  <---You must edit this line!
-IPAddress gateway(192, 168, 1, 1);    //Router gateway          //  <---You must edit this line!
-IPAddress subnet(255, 255, 255, 0);   //LAN subnet mask         //  <---You must edit this line!
-IPAddress dnsserver(192, 168, 1, 1);  //DNS server              //  <---You must edit this line!
+
 const unsigned int serverPort = 8090; // port to run the http server on
 
 // Smartthings / Hubitat Hub TCP/IP Address
-IPAddress hubIp(192, 168, 1, 149);    // smartthings/hubitat hub ip //  <---You must edit this line!
+IPAddress hubIp(192, 168, 1, 136);    // smartthings/hubitat hub ip //  <---You must edit this line!
 
 // SmartThings / Hubitat Hub TCP/IP Address: UNCOMMENT line that corresponds to your hub, COMMENT the other
 const unsigned int hubPort = 39500;   // smartthings hub port
@@ -261,11 +256,11 @@ void setup()
   st::Everything::callOnMsgSend = callback;
   
   //Create the SmartThings ESP32WiFi Communications Object
-    //STATIC IP Assignment - Recommended
-    st::Everything::SmartThing = new st::SmartThingsESP32WiFi(str_ssid, str_password, ip, gateway, subnet, dnsserver, serverPort, hubIp, hubPort, st::receiveSmartString);
+  //STATIC IP Assignment - Recommended
+  //st::Everything::SmartThing = new st::SmartThingsESP32WiFi(WLAN_SSID, WLAN_PASS, ip, gateway, subnet, dnsserver, serverPort, hubIp, hubPort, st::receiveSmartString);
  
-    //DHCP IP Assigment - Must set your router's DHCP server to provice a static IP address for this device's MAC address
-    //st::Everything::SmartThing = new st::SmartThingsESP32WiFi(str_ssid, str_password, serverPort, hubIp, hubPort, st::receiveSmartString);
+  //DHCP IP Assigment - Must set your router's DHCP server to provice a static IP address for this device's MAC address
+  st::Everything::SmartThing = new st::SmartThingsESP32WiFi(WLAN_SSID, WLAN_PASS, serverPort, hubIp, hubPort, st::receiveSmartString);
 
   //Run the Everything class' init() routine which establishes WiFi communications with SmartThings Hub
   st::Everything::init();
