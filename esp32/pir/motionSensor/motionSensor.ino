@@ -2,10 +2,9 @@
  * PIR sensor tester
  */
  
-int ledPin = 5;                // choose the pin for the LED
+int ledPin = 5;                  // choose the pin for the LED
 int inputPin = 13;               // choose the input pin (for PIR sensor)
-int pirState = LOW;             // we start, assuming no motion detected
-int val = 0;                    // variable for reading the pin status
+int pirState = LOW;              // we start, assuming no motion detected
  
 void setup() {
   pinMode(ledPin, OUTPUT);      // declare LED as output
@@ -15,8 +14,7 @@ void setup() {
 }
  
 void loop(){
-  val = digitalRead(inputPin);  // read input value
-  if (val == HIGH) {            // check if the input is HIGH
+  if (digitalRead(inputPin) == HIGH) {            // check if the input is HIGH
     digitalWrite(ledPin, HIGH);  // turn LED ON
     if (pirState == LOW) {
       // we have just turned on

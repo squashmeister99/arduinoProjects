@@ -3,6 +3,8 @@
 #include "Adafruit_MQTT.h"
 #include "Adafruit_MQTT_Client.h"
 #include "credentials.h"
+#include "SevSeg.h"
+
 
 /************ begin globals ******************/
 
@@ -23,6 +25,9 @@ DHT dht(DHTPIN, DHTTYPE);
 int publishInterval = 3000; 
 float gHumidity = 0.0;
 float gTemperature = 0.0;
+bool unitsF = true;
+
+SevSeg sevseg; //Instantiate a seven segment controller object
 
 /********* end globals *********/
 
@@ -55,12 +60,46 @@ void connectToWIFI()
   Serial.println("IP address: "); Serial.println(WiFi.localIP());
 }
 
+void configure_SevenSeg()
+{
+  byte numDigits = 4;
+  byte digitPins[] = {13, 27, 26, 19};
+  byte segmentPins[] = {12, 25, 18, 16, 4, 14, 23, 17};
+  bool resistorsOnSegments = true; // 'false' means resistors are on digit pins
+  byte hardwareConfig = COMMON_ANODE; // See README.md for options
+  bool updateWithDelays = false; // Default. Recommended
+  bool leadingZeros = false; // Use 'true' if you'd like to keep the leading zeros
+  
+  sevseg.begin(hardwareConfig, numDigits, digitPins, segmentPins, resistorsOnSegments, updateWithDelays, leadingZeros);
+  sevseg.setBrightness(10);
+}
+
+void codeForTask1(void* param)
+{ 
+  while(true)
+  {  
+    sevseg.setNumber(gTemperature, 1);
+    sevseg.refreshDisplay(); // Must run repeatedly
+    delay(5);
+  }
+}
+
 void setup() {
   Serial.begin(9600);
-  Serial.println("this sketch reads data from a dht22 sensor and publishes it to adafruit mqtt server");
+  Serial.println("this sketch reads data from a dht22 sensor and publishes it to adafruit mqtt server. Also displays temp data to an attached 7 segment display");
 
+  configure_SevenSeg();
   connectToWIFI();
   dht.begin();
+
+  xTaskCreatePinnedToCore(
+    codeForTask1,   // code to run
+    "displayOnLED",       // name of task
+    2048,           // stack size
+    NULL,           // parameters to pass to task
+    1,              // priority
+    &Task1,         // code to run
+    0);             // Core to run on : choose between 0 and 1 (1 is default for ESP32 IDE)
 
 }
 
@@ -74,16 +113,15 @@ void loop() {
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
   gHumidity = dht.readHumidity();
   // Read temperature as Celsius (the default)
-  gTemperature = dht.readTemperature();
+  gTemperature = dht.readTemperature(unitsF);
   
   // Check if any reads failed and exit early (to try again).
   if (isnan(gHumidity) || isnan(gTemperature)) {
     Serial.println("Failed to read from DHT sensor!");
     return;
   }
-
-  printDataToSerial(gHumidity, gTemperature);
   
+  printDataToSerial(gHumidity, gTemperature);
   publishData(gHumidity, gTemperature);
  
   if(! mqtt.ping()) {
