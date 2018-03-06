@@ -110,6 +110,7 @@
 
 //Digital Pins
 #define PIN_TEMPERATUREHUMIDITY_1 32  //SmartThings Capabilities "Temperature Measurement" and "Relative Humidity Measurement"
+#define PIN_MOTION_1              22  //SmartThings Capability "Motion Sensor"
 
 float gTemperature = 0.0;
 float gHumidity = 0.0;
@@ -119,7 +120,6 @@ SevSeg sevseg; //Instantiate a seven segment controller object
 //******************************************************************************************
 //ESP832 WiFi Information
 //******************************************************************************************
-
 const unsigned int serverPort = 8090; // port to run the http server on
 
 // Smartthings / Hubitat Hub TCP/IP Address
@@ -216,8 +216,10 @@ void setup()
   //           to match your specific use case in the ST Phone Application.
   //******************************************************************************************
   //Polling Sensors
-
   static st::PS_TemperatureHumidity sensor7(F("temphumid1"), 15, 5, PIN_TEMPERATUREHUMIDITY_1, st::PS_TemperatureHumidity::DHT22,"temperature1","humidity1");
+
+  // Interrupt sensors
+  static st::IS_Motion              sensor9(F("motion1"), PIN_MOTION_1, HIGH, false, 500);
   
   //*****************************************************************************
   //  Configure debug print output from each main class 
@@ -251,10 +253,8 @@ void setup()
   //Add each sensor to the "Everything" Class
   //*****************************************************************************
   st::Everything::addSensor(&sensor7);
+  st::Everything::addSensor(&sensor9);
    
-  //*****************************************************************************
-  //Add each executor to the "Everything" Class
-  //*****************************************************************************
   //*****************************************************************************
   //Initialize each of the devices which were added to the Everything Class
   //*****************************************************************************
