@@ -42,7 +42,6 @@
 //******************************************************************************************
 #include <SmartThingsESP32WiFi.h>
 #include "credentials.h"
-#include "SevSeg.h"
 //******************************************************************************************
 // ST_Anything Library 
 //******************************************************************************************
@@ -108,26 +107,20 @@
 #define PIN_10_RESERVED           10  //reserved ESP32 for flash
 #define PIN_11_RESERVED           11  //reserved ESP32 for flash
 
-//Digital Pins
-#define PIN_TEMPERATUREHUMIDITY_1 32  //SmartThings Capabilities "Temperature Measurement" and "Relative Humidity Measurement"
-#define PIN_MOTION_1              22  //SmartThings Capability "Motion Sensor"
+#define PIN_MOTION_1              12  //SmartThings Capability "Motion Sensor"
 
-float gTemperature = 0.0;
-float gHumidity = 0.0;
-TaskHandle_t Task1;
-SevSeg sevseg; //Instantiate a seven segment controller object
 
 //******************************************************************************************
 //ESP832 WiFi Information
 //******************************************************************************************
+
 const unsigned int serverPort = 8090; // port to run the http server on
 
 // Smartthings / Hubitat Hub TCP/IP Address
-IPAddress hubIp(192, 168, 1, 175);    // smartthings/hubitat hub ip //  <---You must edit this line!
+IPAddress hubIp(192, 168, 1, 136);    // smartthings/hubitat hub ip //  <---You must edit this line!
 
 // SmartThings / Hubitat Hub TCP/IP Address: UNCOMMENT line that corresponds to your hub, COMMENT the other
 const unsigned int hubPort = 39500;   // smartthings hub port
-//const unsigned int hubPort = 39501;   // hubitat hub port
 
 //******************************************************************************************
 //st::Everything::callOnMsgSend() optional callback routine.  This is a sniffer to monitor 
@@ -144,43 +137,16 @@ void callback(const String &msg)
   
   //Masquerade as the ThingShield to send data to the Arduino, as if from the ST Cloud (uncomment and edit following line)
   //st::receiveSmartString("Put your command here!");  //use same strings that the Device Handler would send
-  if (strTemp.startsWith("temperature1"))
-  {
-      strTemp.remove(0,13);
-      Serial.println(strTemp);
-      gTemperature = strTemp.toFloat();
-  }
+//  if (strTemp.startsWith("temperature1"))
+//  {
+//    strTemp.remove(0,13);
+//    Serial.println(strTemp);
+//  }
 //  if (strTemp.startsWith("humidity1"))
 //  {
 //    strTemp.remove(0,10);
 //    Serial.println(strTemp);
 //  }
-}
-
-void configure_SevenSeg()
-{
-  byte numDigits = 4;
-  byte digitPins[] = {13, 27, 26, 19};
-  byte segmentPins[] = {12, 25, 18, 16, 4, 14, 23, 17};
-  bool resistorsOnSegments = true; // 'false' means resistors are on digit pins
-  byte hardwareConfig = COMMON_ANODE; // See README.md for options
-  bool updateWithDelays = false; // Default. Recommended
-  bool leadingZeros = false; // Use 'true' if you'd like to keep the leading zeros
-  
-  sevseg.begin(hardwareConfig, numDigits, digitPins, segmentPins, resistorsOnSegments, updateWithDelays, leadingZeros);
-  sevseg.setBrightness(10);
-}
-
-
-void displayLEDTask(void* param)
-{ 
-  while(true)
-  {  
-    //Serial.println("display LED Task");
-    sevseg.setNumber(gTemperature, 1); // 1 digit after decimal precision
-    sevseg.refreshDisplay(); // Must run repeatedly
-    delay(5);
-  }
 }
 
 //******************************************************************************************
@@ -216,11 +182,11 @@ void setup()
   //           to match your specific use case in the ST Phone Application.
   //******************************************************************************************
   //Polling Sensors
-  static st::PS_TemperatureHumidity sensor7(F("temphumid1"), 15, 5, PIN_TEMPERATUREHUMIDITY_1, st::PS_TemperatureHumidity::DHT22,"temperature1","humidity1");
 
-  // Interrupt sensors
+
+  //Interrupt Sensors 
   static st::IS_Motion              sensor9(F("motion1"), PIN_MOTION_1, HIGH, false, 500);
-  
+
   //*****************************************************************************
   //  Configure debug print output from each main class 
   //  -Note: Set these to "false" if using Hardware Serial on pins 0 & 1
@@ -239,10 +205,6 @@ void setup()
   //Initialize the optional local callback routine (safe to comment out if not desired)
   st::Everything::callOnMsgSend = callback;
   
-  //Create the SmartThings ESP32WiFi Communications Object
-  //STATIC IP Assignment - Recommended
-  //st::Everything::SmartThing = new st::SmartThingsESP32WiFi(WLAN_SSID, WLAN_PASS, ip, gateway, subnet, dnsserver, serverPort, hubIp, hubPort, st::receiveSmartString);
- 
   //DHCP IP Assigment - Must set your router's DHCP server to provice a static IP address for this device's MAC address
   st::Everything::SmartThing = new st::SmartThingsESP32WiFi(WLAN_SSID, WLAN_PASS, serverPort, hubIp, hubPort, st::receiveSmartString);
 
@@ -252,25 +214,12 @@ void setup()
   //*****************************************************************************
   //Add each sensor to the "Everything" Class
   //*****************************************************************************
-  st::Everything::addSensor(&sensor7);
   st::Everything::addSensor(&sensor9);
    
   //*****************************************************************************
   //Initialize each of the devices which were added to the Everything Class
   //*****************************************************************************
   st::Everything::initDevices();
-
-  configure_SevenSeg();
-
-  //setup task on core 1
-  xTaskCreatePinnedToCore(
-    displayLEDTask,   // code to run
-    "displayOnLED",       // name of task
-    2048,           // stack size
-    NULL,           // parameters to pass to task
-    1,              // priority
-    &Task1,         // code to run
-    0);             // Core to run on : choose between 0 and 1 (1 is default for ESP32 IDE)
   
 }
 

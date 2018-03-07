@@ -29,7 +29,7 @@
 */
 
 // constants won't change. Used here to set a pin number:
-const int LED_BUILTIN =  5;// built-in LED is wired to GPIO 5 in ESP32 LOLIN board
+const int ledPin =  13;// built-in LED is wired to GPIO 5 in ESP32 LOLIN board
 
 void setup() {
   Serial.begin(9600);
