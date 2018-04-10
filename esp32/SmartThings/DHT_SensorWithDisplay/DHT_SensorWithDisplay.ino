@@ -239,12 +239,9 @@ void setup()
   //Initialize the optional local callback routine (safe to comment out if not desired)
   st::Everything::callOnMsgSend = callback;
   
-  //Create the SmartThings ESP32WiFi Communications Object
-  //STATIC IP Assignment - Recommended
-  //st::Everything::SmartThing = new st::SmartThingsESP32WiFi(WLAN_SSID, WLAN_PASS, ip, gateway, subnet, dnsserver, serverPort, hubIp, hubPort, st::receiveSmartString);
- 
   //DHCP IP Assigment - Must set your router's DHCP server to provice a static IP address for this device's MAC address
-  st::Everything::SmartThing = new st::SmartThingsESP32WiFi(WLAN_SSID, WLAN_PASS, serverPort, hubIp, hubPort, st::receiveSmartString);
+  st::SmartThingsESP32WiFi* stWifiPtr = new st::SmartThingsESP32WiFi(WLAN_SSID, WLAN_PASS, serverPort, hubIp, hubPort, st::receiveSmartString);
+  st::Everything::SmartThing = stWifiPtr;
 
   //Run the Everything class' init() routine which establishes WiFi communications with SmartThings Hub
   st::Everything::init();

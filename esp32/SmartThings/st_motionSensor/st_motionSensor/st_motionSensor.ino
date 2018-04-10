@@ -117,7 +117,7 @@
 const unsigned int serverPort = 8090; // port to run the http server on
 
 // Smartthings / Hubitat Hub TCP/IP Address
-IPAddress hubIp(192, 168, 1, 136);    // smartthings/hubitat hub ip //  <---You must edit this line!
+IPAddress hubIp(192, 168, 1, 175);    // smartthings/hubitat hub ip //  <---You must edit this line!
 
 // SmartThings / Hubitat Hub TCP/IP Address: UNCOMMENT line that corresponds to your hub, COMMENT the other
 const unsigned int hubPort = 39500;   // smartthings hub port
