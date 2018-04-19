@@ -1,41 +1,9 @@
 //******************************************************************************************
-//  File: ST_Anything_Multiples_ESP32WiFi.ino
-//  Authors: Dan G Ogorchock & Daniel J Ogorchock (Father and Son)
-//
+
 //  Summary:  This Arduino Sketch, along with the ST_Anything library and the revised SmartThings 
 //            library, demonstrates the ability of one ESP32 to implement 
 //            a multi input/output custom device for integration into SmartThings.
-//            The ST_Anything library takes care of all of the work to schedule device updates
-//            as well as all communications with the ESP32's WiFi.
-//
-//            ST_Anything_Multiples implements the following ST Capabilities as a demo of what is possible with a single ESP32
-//              - 2 x Water Sensor devices (using an analog input pin to measure voltage from a water detector board)
-//              - 2 x Illuminance Measurement devices (using a photoresitor attached to ananlog input)
-//              - 1 x Voltage Measurement devices (using a photoresitor attached to ananlog input)
-//              - 1 x Door Control devices (used typically for Garage Doors - input pin (contact sensor) and output pin (relay switch)
-//              - 2 x Contact Sensor devices (used to monitor magnetic door sensors)
-//              - 1 x Switch devices (used to turn on a digital output (e.g. LED, relay, etc...)
-//              - 1 x Smoke Detector device (using simple digital input)
-//              - 1 x MQ-2 Smoke Detector devices (using simple analog input compared to user defined limit)
-//              - 1 x Carbon Monoxide Detector device (using simple digital input)
-//              - 2 x Motion devices (used to detect motion)
-//              - 1 x Temperature Measurement device (Temperature from DHT22 device)
-//              - 1 x Humidity Measurement device (Humidity from DHT22 device)
-//              - 1 x Temperature Measurement device (Temperature from Dallas Semi 1-Wire DS18B20 device)
-//              - 1 x Relay Switch device (used to turn on a digital output for a set number of cycles And On/Off times (e.g.relay, etc...))
-//              - 2 x Button devices (sends "pushed" if held for less than 1 second, else sends "held"
-//              - 2 x Alarm devices - 1 siren only, 1 siren and strobe (using simple digital outputs)
-//
-//    
-//  Change History:
-//
-//    Date        Who            What
-//    ----        ---            ----
-//    2017-08-14  Dan Ogorchock  Original Creation - Adapted from ESP8266 to work with ESP32 board
-//    2018-02-09  Dan Ogorchock  Added support for Hubitat Elevation Hub
-//
-//   Special thanks to Joshua Spain for his contributions in porting ST_Anything to the ESP32!
-//
+//            
 //******************************************************************************************
 //******************************************************************************************
 // SmartThings Library for ESP32WiFi
@@ -60,23 +28,8 @@
 #include <InterruptSensor.h> //Generic Interrupt "Sensor" Class, waits for change of state on digital input 
 #include <PollingSensor.h>   //Generic Polling "Sensor" Class, polls Arduino pins periodically
 #include <Everything.h>      //Master Brain of ST_Anything library that ties everything together and performs ST Shield communications
-
-#include <PS_DS18B20_Temperature.h>  //Implements a Polling Sesnor (PS) to measure Temperature via DS18B20 libraries 
-#include <PS_Illuminance.h>  //Implements a Polling Sensor (PS) to measure light levels via a photo resistor on an analog input pin 
-#include <PS_Voltage.h>      //Implements a Polling Sensor (PS) to measure voltage on an analog input pin 
 #include <PS_TemperatureHumidity.h>  //Implements a Polling Sensor (PS) to measure Temperature and Humidity via DHT library
-#include <PS_Water.h>        //Implements a Polling Sensor (PS) to measure presence of water (i.e. leak detector) on an analog input pin 
-#include <PS_MQ2_Smoke.h>    //Implements an Polling Sensor (PS) to monitor the status of an analog input pin from a MQ2 sensor
 #include <IS_Motion.h>       //Implements an Interrupt Sensor (IS) to detect motion via a PIR sensor on a digital input pin
-#include <IS_Contact.h>      //Implements an Interrupt Sensor (IS) to monitor the status of a digital input pin
-#include <IS_Smoke.h>        //Implements an Interrupt Sensor (IS) to monitor the status of a digital input pin
-#include <IS_CarbonMonoxide.h> //Implements an Interrupt Sensor (IS) to monitor the status of a digital input pin
-#include <IS_DoorControl.h>  //Implements an Interrupt Sensor (IS) and Executor to monitor the status of a digital input pin and control a digital output pin
-#include <IS_Button.h>       //Implements an Interrupt Sensor (IS) to monitor the status of a digital input pin for button presses
-#include <EX_Switch.h>       //Implements an Executor (EX) via a digital output to a relay
-#include <EX_Alarm.h>        //Implements Executor (EX)as an Alarm capability with Siren and Strobe via digital outputs to relays
-#include <S_TimedRelay.h>    //Implements a Sensor to control a digital output pin with timing/cycle repeat capabilities
-#include <EX_Switch_Dim.h>   //Implements an Executor (EX) for a switch (on/off) and pwm output (level) uses 2 digital output pins
 
 //****************************************************************************************************************************
 //NodeMCU-32s ESP32 Pin Definitions (just for reference from ..hardware\espressif\esp32\variants\nodemcu-32s\pins_arduino.h)
@@ -122,9 +75,8 @@
 float gTemperature = 0.0;
 float gHumidity = 0.0;
 TaskHandle_t Task1;
-SevSeg sevseg; //Instantiate a seven segment controller object
-int gMQTTPublishInterval = 10000; // 10 sec interval
-
+SevSeg sevseg; 
+int gPublishIntervalInMilliSec = 1000*60*5; // 5 minute interval
 //******************************************************************************************
 //ESP832 WiFi Information
 //******************************************************************************************
@@ -193,7 +145,7 @@ void configure_SevenSeg()
 }
 
 
-void displayLEDTask(void* param)
+void displayAndPublish(void* param)
 { 
   int count = 0;
   while(true)
@@ -205,7 +157,7 @@ void displayLEDTask(void* param)
     count += 5;
     
     //publish data every 10 sec to MQTT server
-    if(count%gMQTTPublishInterval == 0) {
+    if(count%gPublishIntervalInMilliSec == 0) {
       publishDataToMQTTServer(gHumidity, gTemperature);
       count = 0; // reset counter to 0 to avoid any overflow   
     }
@@ -327,7 +279,7 @@ void setup()
 
   //setup task on core 1
   xTaskCreatePinnedToCore(
-    displayLEDTask,   // code to run
+    displayAndPublish,   // code to run
     "displayOnLED",       // name of task
     2048,           // stack size
     NULL,           // parameters to pass to task
