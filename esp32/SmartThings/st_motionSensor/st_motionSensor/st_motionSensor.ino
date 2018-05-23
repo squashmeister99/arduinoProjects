@@ -107,7 +107,7 @@
 #define PIN_10_RESERVED           10  //reserved ESP32 for flash
 #define PIN_11_RESERVED           11  //reserved ESP32 for flash
 
-#define PIN_MOTION_1              12  //SmartThings Capability "Motion Sensor"
+#define PIN_MOTION_1             13  //SmartThings Capability "Motion Sensor"
 
 
 //******************************************************************************************

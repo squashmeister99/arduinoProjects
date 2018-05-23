@@ -76,7 +76,7 @@ float gTemperature = 0.0;
 float gHumidity = 0.0;
 TaskHandle_t Task1;
 SevSeg sevseg; 
-int gPublishIntervalInMilliSec = 1000*60*5; // 5 minute interval
+unsigned int gPublishIntervalInMilliSec = 1000*60*15; // 15 minute interval
 //******************************************************************************************
 //ESP832 WiFi Information
 //******************************************************************************************
@@ -101,6 +101,9 @@ Adafruit_MQTT_Publish humidity = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/fee
 // Setup a feed called 'temperature' 
 Adafruit_MQTT_Publish temperature = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/temperature");
 
+// Setup a feed called 'publishInterval' for subscribing to changes on the slider
+Adafruit_MQTT_Subscribe publishInterval = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAME "/feeds/publishInterval", MQTT_QOS_1);
+
 
 //******************************************************************************************
 //st::Everything::callOnMsgSend() optional callback routine.  This is a sniffer to monitor 
@@ -123,11 +126,19 @@ void callback(const String &msg)
       Serial.println(strTemp);
       gTemperature = strTemp.toFloat();
   }
-//  if (strTemp.startsWith("humidity1"))
-//  {
-//    strTemp.remove(0,10);
-//    Serial.println(strTemp);
-//  }
+  if (strTemp.startsWith("humidity1"))
+  {
+      strTemp.remove(0,10);
+      Serial.println(strTemp);
+      gHumidity = strTemp.toFloat();
+  }
+}
+
+void publishIntervalCallback(unsigned int newIntervalInMin) {
+  Serial.print("Hey we're in a publish interval callback, the new publish interval is: ");
+  Serial.println(newIntervalInMin);
+  gPublishIntervalInMilliSec = 1000*60*newIntervalInMin;
+  
 }
 
 void configure_SevenSeg()
@@ -156,7 +167,7 @@ void displayAndPublish(void* param)
     delay(5);
     count += 5;
     
-    //publish data every 10 sec to MQTT server
+    //publish data to MQTT server
     if(count%gPublishIntervalInMilliSec == 0) {
       publishDataToMQTTServer(gHumidity, gTemperature);
       count = 0; // reset counter to 0 to avoid any overflow   
@@ -176,7 +187,7 @@ void MQTT_connect() {
 
   Serial.print("Connecting to MQTT... ");
 
-  uint8_t retries = 3;
+  uint8_t retries = 30;
   while ((ret = mqtt.connect()) != 0) { // connect will return 0 for connected
        Serial.println(mqtt.connectErrorString(ret));
        Serial.println("Retrying MQTT connection in 5 seconds...");
@@ -184,8 +195,8 @@ void MQTT_connect() {
        delay(5000);  // wait 5 seconds
        retries--;
        if (retries == 0) {
-         // basically die and wait for WDT to reset me
-         while (1);
+         // restart the device..
+         ESP.restart();
        }
   }
   
@@ -236,7 +247,7 @@ void setup()
   //           to match your specific use case in the ST Phone Application.
   //******************************************************************************************
   //Polling Sensors
-  static st::PS_TemperatureHumidity sensor7(F("temphumid1"), 15, 5, PIN_TEMPERATUREHUMIDITY_1, st::PS_TemperatureHumidity::DHT22,"temperature1","humidity1");
+  static st::PS_TemperatureHumidity sensor7(F("temphumid1"), 15*60, 5, PIN_TEMPERATUREHUMIDITY_1, st::PS_TemperatureHumidity::DHT22,"temperature1","humidity1");
 
   // Interrupt sensors
   static st::IS_Motion              sensor9(F("motion1"), PIN_MOTION_1, HIGH, false, 500);
@@ -285,8 +296,7 @@ void setup()
     NULL,           // parameters to pass to task
     1,              // priority
     &Task1,         // code to run
-    0);             // Core to run on : choose between 0 and 1 (1 is default for ESP32 IDE)
-  
+    0);             // Core to run on : choose between 0 and 1 (1 is default for ESP32 IDE) 
 }
 
 //******************************************************************************************
@@ -298,4 +308,5 @@ void loop()
   //Execute the Everything run method which takes care of "Everything"
   //*****************************************************************************
   st::Everything::run();
+ 
 }
